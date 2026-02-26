@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #1a1a2e;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .calculator {
+      background: #16213e;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      width: 320px;
+    }
+
+    .display {
+      background: #0f3460;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      text-align: right;
+      overflow: hidden;
+    }
+
+    .display .expression {
+      color: #a0aec0;
+      font-size: 0.85rem;
+      min-height: 1.2em;
+      word-break: break-all;
+    }
+
+    .display .current {
+      color: #e2e8f0;
+      font-size: 2.4rem;
+      font-weight: 300;
+      word-break: break-all;
+      line-height: 1.2;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 500;
+      padding: 18px 10px;
+      cursor: pointer;
+      transition: transform 0.08s, opacity 0.08s;
+      outline: none;
+    }
+
+    button:active { transform: scale(0.93); opacity: 0.85; }
+
+    .btn-func  { background: #2d3748; color: #a0aec0; }
+    .btn-op    { background: #e67e22; color: #fff; }
+    .btn-digit { background: #2c3e6b; color: #e2e8f0; }
+    .btn-eq    { background: #e67e22; color: #fff; }
+    .btn-zero  { grid-column: span 2; text-align: left; padding-left: 24px; }
+
+    button:hover { filter: brightness(1.15); }
+  </style>
+</head>
+<body>
+  <div class="calculator" role="region" aria-label="Calculator">
+    <div class="display">
+      <div class="expression" id="expression" aria-live="polite"></div>
+      <div class="current"    id="current"    aria-live="polite">0</div>
+    </div>
+
+    <div class="buttons">
+      <!-- Row 1 -->
+      <button class="btn-func"  onclick="calcClear()"    aria-label="Clear">AC</button>
+      <button class="btn-func"  onclick="calcToggleSign()" aria-label="Toggle sign">+/−</button>
+      <button class="btn-func"  onclick="calcPercent()"  aria-label="Percent">%</button>
+      <button class="btn-op"    onclick="calcOp('÷')"   aria-label="Divide">÷</button>
+      <!-- Row 2 -->
+      <button class="btn-digit" onclick="calcDigit('7')">7</button>
+      <button class="btn-digit" onclick="calcDigit('8')">8</button>
+      <button class="btn-digit" onclick="calcDigit('9')">9</button>
+      <button class="btn-op"    onclick="calcOp('×')"   aria-label="Multiply">×</button>
+      <!-- Row 3 -->
+      <button class="btn-digit" onclick="calcDigit('4')">4</button>
+      <button class="btn-digit" onclick="calcDigit('5')">5</button>
+      <button class="btn-digit" onclick="calcDigit('6')">6</button>
+      <button class="btn-op"    onclick="calcOp('−')"   aria-label="Subtract">−</button>
+      <!-- Row 4 -->
+      <button class="btn-digit" onclick="calcDigit('1')">1</button>
+      <button class="btn-digit" onclick="calcDigit('2')">2</button>
+      <button class="btn-digit" onclick="calcDigit('3')">3</button>
+      <button class="btn-op"    onclick="calcOp('+')"   aria-label="Add">+</button>
+      <!-- Row 5 -->
+      <button class="btn-digit btn-zero" onclick="calcDigit('0')">0</button>
+      <button class="btn-digit" onclick="calcDecimal()">.</button>
+      <button class="btn-eq"    onclick="calcEquals()"  aria-label="Equals">=</button>
+    </div>
+  </div>
+
+  <script>
+    const elExpression = document.getElementById('expression');
+    const elCurrent    = document.getElementById('current');
+
+    let current    = '0';   // number being typed
+    let previous   = null;  // previous operand (string)
+    let operator   = null;  // pending operator symbol
+    let freshInput = false; // next digit starts a new number
+
+    function updateDisplay() {
+      elCurrent.textContent = current;
+      elExpression.textContent = (previous !== null && operator)
+        ? previous + ' ' + operator
+        : '';
+    }
+
+    function isError() { return current === 'Error'; }
+
+    function calcDigit(d) {
+      if (isError()) { calcClear(); }
+      if (freshInput) { current = d; freshInput = false; }
+      else current = (current === '0') ? d : current + d;
+      updateDisplay();
+    }
+
+    function calcDecimal() {
+      if (isError()) { calcClear(); }
+      if (freshInput) { current = '0.'; freshInput = false; updateDisplay(); return; }
+      if (!current.includes('.')) current += '.';
+      updateDisplay();
+    }
+
+    function calcToggleSign() {
+      if (isError()) return;
+      if (current !== '0') current = current.startsWith('-') ? current.slice(1) : '-' + current;
+      updateDisplay();
+    }
+
+    function calcPercent() {
+      if (isError()) return;
+      current = String(parseFloat(current) / 100);
+      updateDisplay();
+    }
+
+    function calcOp(op) {
+      if (isError()) return;
+      if (operator && !freshInput) calcEquals(true);
+      previous  = current;
+      operator  = op;
+      freshInput = true;
+      updateDisplay();
+    }
+
+    function evaluate(a, op, b) {
+      a = parseFloat(a); b = parseFloat(b);
+      switch (op) {
+        case '+': return a + b;
+        case '−': return a - b;
+        case '×': return a * b;
+        case '÷': return b !== 0 ? a / b : 'Error';
+        default:  return b;
+      }
+    }
+
+    function calcEquals(chain = false) {
+      if (operator === null || previous === null) return;
+      const result = evaluate(previous, operator, current);
+      if (!chain) {
+        elExpression.textContent = previous + ' ' + operator + ' ' + current + ' =';
+        operator = null; previous = null;
+      }
+      current = (result === 'Error') ? 'Error' : String(+result.toFixed(10));
+      freshInput = !chain;
+      elCurrent.textContent = current;
+    }
+
+    function calcClear() {
+      current = '0'; previous = null; operator = null; freshInput = false;
+      updateDisplay();
+    }
+
+    updateDisplay();
+  </script>
+</body>
+</html>
